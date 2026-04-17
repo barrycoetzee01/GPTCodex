@@ -1,0 +1,2620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metal Recovery Command Centre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1318;
+      --bg-elevated: #171d24;
+      --bg-panel: rgba(24, 32, 40, 0.88);
+      --bg-soft: #1f2831;
+      --line: rgba(255, 255, 255, 0.09);
+      --line-strong: rgba(255, 255, 255, 0.16);
+      --text: #f4f7fb;
+      --muted: #99a7b8;
+      --copper: #d98b47;
+      --copper-soft: rgba(217, 139, 71, 0.18);
+      --steel: #7fa1c4;
+      --steel-soft: rgba(127, 161, 196, 0.18);
+      --amber: #f0b44d;
+      --green: #34d399;
+      --red: #f87171;
+      --blue: #60a5fa;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      --radius-lg: 26px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+      --section-gap: 22px;
+    }
+    * { box-sizing: border-box; }
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(217, 139, 71, 0.14), transparent 26%),
+        radial-gradient(circle at top right, rgba(96, 165, 250, 0.12), transparent 24%),
+        linear-gradient(180deg, #12171d 0%, #0d1217 100%);
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.42), transparent 95%);
+    }
+    .app-shell {
+      width: min(1480px, calc(100vw - 24px));
+      margin: 18px auto 36px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.35fr 0.95fr;
+      gap: 20px;
+      margin-bottom: var(--section-gap);
+    }
+    .hero-card,
+    .panel,
+    .kpi-card,
+    .table-panel,
+    .insight-card,
+    .status-card {
+      border: 1px solid var(--line);
+      background: var(--bg-panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+    .hero-card {
+      border-radius: 32px;
+      padding: 28px;
+      overflow: hidden;
+      position: relative;
+    }
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      top: -70px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(217, 139, 71, 0.22), transparent 70%);
+      pointer-events: none;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--amber);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      margin-bottom: 18px;
+    }
+    h1, h2, h3 {
+      margin: 0;
+      font-family: "Rajdhani", sans-serif;
+      letter-spacing: 0.03em;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 4.5rem);
+      line-height: 0.92;
+      margin-bottom: 14px;
+    }
+    .hero-copy {
+      color: #d8e1eb;
+      line-height: 1.6;
+      max-width: 70ch;
+      margin-bottom: 22px;
+    }
+    .chip-row,
+    .filter-grid,
+    .kpi-grid,
+    .charts-grid,
+    .summary-grid,
+    .analysis-grid,
+    .table-grid {
+      display: grid;
+      gap: 16px;
+    }
+    .chip-row {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .metric-chip {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+    }
+    .metric-chip strong {
+      display: block;
+      font-family: "Rajdhani", sans-serif;
+      font-size: 1.45rem;
+      margin-top: 3px;
+    }
+    .hero-side {
+      display: grid;
+      gap: 16px;
+    }
+    .status-card {
+      border-radius: 26px;
+      padding: 22px;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .status-stat {
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border: 1px solid var(--line);
+    }
+    .status-stat strong {
+      display: block;
+      font-size: 1.6rem;
+      font-family: "Rajdhani", sans-serif;
+      margin-top: 6px;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .section-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .panel {
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      margin-bottom: var(--section-gap);
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .upload-layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+    }
+    .dropzone {
+      border: 1.5px dashed rgba(217, 139, 71, 0.45);
+      background:
+        linear-gradient(135deg, rgba(217, 139, 71, 0.1), rgba(127, 161, 196, 0.08)),
+        rgba(255,255,255,0.02);
+      border-radius: 24px;
+      padding: 24px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      transition: 180ms ease;
+    }
+    .dropzone.dragover {
+      transform: translateY(-2px);
+      border-color: var(--amber);
+      box-shadow: 0 0 0 4px rgba(240, 180, 77, 0.12);
+    }
+    .dropzone-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .button,
+    .nav-button,
+    .tab-button {
+      border: 1px solid transparent;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 180ms ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .button.primary,
+    .nav-button.active,
+    .tab-button.active {
+      background: linear-gradient(180deg, rgba(217, 139, 71, 0.28), rgba(217, 139, 71, 0.14));
+      border-color: rgba(217, 139, 71, 0.45);
+      color: #fff3e7;
+    }
+    .button:hover,
+    .nav-button:hover,
+    .tab-button:hover {
+      transform: translateY(-1px);
+      border-color: var(--line-strong);
+    }
+    .upload-guidance {
+      display: grid;
+      gap: 12px;
+    }
+    .guidance-card {
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid var(--line);
+    }
+    .guidance-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .guidance-card ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    .warning-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .warning {
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: rgba(240, 180, 77, 0.12);
+      border: 1px solid rgba(240, 180, 77, 0.25);
+      color: #ffe6b3;
+      font-size: 0.94rem;
+    }
+    .warning.error {
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(248, 113, 113, 0.28);
+      color: #ffd6d6;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .toolbar .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+    .filter-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+    .field label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: rgba(217, 139, 71, 0.5);
+      box-shadow: 0 0 0 3px rgba(217, 139, 71, 0.12);
+    }
+    .nav-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: var(--section-gap);
+      position: sticky;
+      top: 10px;
+      z-index: 20;
+      padding: 8px;
+      border-radius: 20px;
+      backdrop-filter: blur(14px);
+      background: rgba(14, 19, 24, 0.72);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .kpi-strip {
+      position: sticky;
+      top: 76px;
+      z-index: 15;
+      margin-bottom: var(--section-gap);
+    }
+    .kpi-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .kpi-card {
+      border-radius: 22px;
+      padding: 18px;
+      overflow: hidden;
+      position: relative;
+    }
+    .kpi-card::after {
+      content: "";
+      position: absolute;
+      right: -30px;
+      bottom: -30px;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
+      pointer-events: none;
+    }
+    .kpi-label {
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-family: "Rajdhani", sans-serif;
+      font-size: clamp(1.85rem, 3.4vw, 2.6rem);
+      line-height: 0.95;
+      margin-bottom: 10px;
+    }
+    .kpi-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      background: rgba(255,255,255,0.06);
+    }
+    .trend.up { color: #93f6cb; }
+    .trend.down { color: #ffb0b0; }
+    .trend.flat { color: #d4dbe4; }
+    .sparkline {
+      width: 92px;
+      height: 28px;
+    }
+    .summary-grid {
+      grid-template-columns: 1.15fr 0.85fr;
+      margin-bottom: var(--section-gap);
+    }
+    .summary-card,
+    .funnel-card {
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.035);
+      padding: 18px;
+    }
+    .summary-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .summary-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(255,255,255,0.02);
+    }
+    .summary-item strong {
+      font-family: "Rajdhani", sans-serif;
+      font-size: 1.25rem;
+    }
+    .funnel-bars {
+      display: grid;
+      gap: 14px;
+      margin-top: 12px;
+    }
+    .funnel-stage {
+      display: grid;
+      gap: 6px;
+    }
+    .funnel-track {
+      height: 16px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.06);
+    }
+    .funnel-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(217,139,71,0.95), rgba(127,161,196,0.95));
+    }
+    .charts-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+    .chart-card {
+      grid-column: span 6;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      padding: 18px;
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-card.large { grid-column: span 8; }
+    .chart-card.small { grid-column: span 4; }
+    .chart-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .chart-subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .chart-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 250px;
+    }
+    .analysis-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .insight-card {
+      border-radius: 24px;
+      padding: 20px;
+      display: grid;
+      gap: 14px;
+    }
+    .insight-list {
+      display: grid;
+      gap: 10px;
+    }
+    .insight {
+      border-left: 3px solid rgba(217, 139, 71, 0.65);
+      padding: 10px 0 10px 14px;
+      color: #dbe4ee;
+      background: rgba(255,255,255,0.02);
+      border-radius: 0 14px 14px 0;
+    }
+    .insight small {
+      display: block;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .tab-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .table-grid {
+      grid-template-columns: 1fr;
+    }
+    .table-panel {
+      border-radius: 24px;
+      padding: 18px;
+      overflow: hidden;
+    }
+    .table-scroller {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.02);
+      max-height: 480px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 960px;
+    }
+    th, td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 0.92rem;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #1a222b;
+      z-index: 1;
+      color: #dfe8f2;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    tbody tr:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .num {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .badge.paid,
+    .badge.good {
+      background: rgba(52,211,153,0.14);
+      color: #9cf4ce;
+    }
+    .badge.pending,
+    .badge.warn {
+      background: rgba(240,180,77,0.14);
+      color: #ffe4b1;
+    }
+    .badge.unpaid,
+    .badge.risk {
+      background: rgba(248,113,113,0.14);
+      color: #ffc0c0;
+    }
+    .subtle {
+      color: var(--muted);
+    }
+    .empty-state {
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line-strong);
+      border-radius: 18px;
+    }
+    .footer-note {
+      color: var(--muted);
+      text-align: center;
+      padding: 14px 0 8px;
+      font-size: 0.9rem;
+    }
+    .hidden { display: none !important; }
+    @media (max-width: 1180px) {
+      .hero,
+      .upload-layout,
+      .summary-grid,
+      .analysis-grid {
+        grid-template-columns: 1fr;
+      }
+      .filter-grid,
+      .kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .chart-card,
+      .chart-card.large,
+      .chart-card.small {
+        grid-column: span 12;
+      }
+    }
+    @media (max-width: 780px) {
+      .app-shell {
+        width: min(100vw - 12px, 100%);
+        margin: 8px auto 18px;
+      }
+      .hero-card,
+      .panel,
+      .status-card,
+      .table-panel {
+        padding: 16px;
+        border-radius: 22px;
+      }
+      .chip-row,
+      .filter-grid,
+      .kpi-grid,
+      .status-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .nav-row,
+      .kpi-strip {
+        position: static;
+      }
+    }
+    @media (max-width: 560px) {
+      .chip-row,
+      .filter-grid,
+      .kpi-grid,
+      .status-grid {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        font-size: 2.35rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <section class="hero">
+      <div class="hero-card">
+        <div class="eyebrow">Recovery Operations Intelligence</div>
+        <h1>Metal Recovery<br />Command Centre</h1>
+        <p class="hero-copy">
+          Track collection flow, extraction output, recovered metal sales, live stock on hand, buyer performance, and operational bottlenecks in one production-style dashboard built for a small copper and mixed-metal recovery business.
+        </p>
+        <div class="chip-row">
+          <div class="metric-chip">
+            <span class="subtle">Full Flow Coverage</span>
+            <strong>Collection to Cash</strong>
+          </div>
+          <div class="metric-chip">
+            <span class="subtle">Import Ready</span>
+            <strong>CSV / XLSX / Sheets</strong>
+          </div>
+          <div class="metric-chip">
+            <span class="subtle">Decision Focus</span>
+            <strong>Profit, Yield, Loss</strong>
+          </div>
+          <div class="metric-chip">
+            <span class="subtle">Default Dataset</span>
+            <strong>Live Demo Included</strong>
+          </div>
+        </div>
+      </div>
+      <div class="hero-side">
+        <div class="status-card">
+          <div class="section-title">
+            <div>
+              <h2>Live Ops Snapshot</h2>
+              <p>Current filtered business pulse</p>
+            </div>
+            <span class="badge good" id="dataModeBadge">Demo Data Active</span>
+          </div>
+          <div class="status-grid" id="heroStats"></div>
+        </div>
+        <div class="status-card">
+          <div class="section-title">
+            <div>
+              <h2>Recommended Focus</h2>
+              <p>Auto-generated target priorities from current data</p>
+            </div>
+          </div>
+          <div class="insight-list" id="focusSignals"></div>
+        </div>
+      </div>
+    </section>
+    <section class="panel" id="import">
+      <div class="panel-header">
+        <div>
+          <h2>Import And Data Setup</h2>
+          <div class="chart-subtitle">Drop in exports from spreadsheets, or run instantly on the built-in demo operations dataset.</div>
+        </div>
+        <div class="toolbar">
+          <span class="pill" id="datasetCounts">Collections 0 | Extraction 0 | Sales 0 | Inventory 0</span>
+          <button class="button" id="loadDemoBtn">Reload Demo Data</button>
+        </div>
+      </div>
+      <div class="upload-layout">
+        <div>
+          <div class="dropzone" id="dropzone">
+            <h3>Drag and drop one or more files here</h3>
+            <div class="subtle">Accepted: `.csv`, `.xlsx`, `.xls`, or Google Sheets exports. You can upload separate files per dataset or one workbook with tabs like <strong>Collections</strong>, <strong>Extraction</strong>, <strong>Sales</strong>, and <strong>Inventory</strong>.</div>
+            <div class="dropzone-actions">
+              <label class="button primary" for="fileInput">Choose Files</label>
+              <button class="button" id="downloadTemplateBtn" type="button">Download CSV Templates</button>
+            </div>
+            <input type="file" id="fileInput" class="hidden" multiple accept=".csv,.xlsx,.xls" />
+            <div class="subtle" id="uploadStatus">No files uploaded yet. Demo data is powering the dashboard.</div>
+          </div>
+          <div class="warning-list" id="warningList"></div>
+        </div>
+        <div class="upload-guidance">
+          <div class="guidance-card">
+            <h3>Expected dataset names</h3>
+            <ul>
+              <li><strong>Collections</strong>: source items, area, costs, batch IDs</li>
+              <li><strong>Extraction</strong>: materials recovered by batch and source item</li>
+              <li><strong>Sales</strong>: materials sold, buyers, price per kg, payment state</li>
+              <li><strong>Inventory</strong>: current stock and value on hand</li>
+            </ul>
+          </div>
+          <div class="guidance-card">
+            <h3>Beginner-friendly tips</h3>
+            <ul>
+              <li>Separate files work fine. The uploader will infer the dataset from the filename when possible.</li>
+              <li>Missing columns trigger clear warnings, and valid rows still load where practical.</li>
+              <li>If no inventory file is supplied, the dashboard calculates stock from extraction minus sales.</li>
+              <li>Google Sheets users can use <strong>File → Download → CSV</strong> or Excel.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="panel" id="filters">
+      <div class="panel-header">
+        <div>
+          <h2>Filters And Timeline Controls</h2>
+          <div class="chart-subtitle">Slice performance by date, area, item type, material, buyer, grade, and payment status.</div>
+        </div>
+        <div class="toolbar">
+          <button class="button" data-preset="today">Today</button>
+          <button class="button" data-preset="week">This Week</button>
+          <button class="button" data-preset="month">This Month</button>
+          <button class="button" data-preset="quarter">This Quarter</button>
+          <button class="button" data-preset="all">All Data</button>
+          <button class="button" id="clearFiltersBtn">Clear Filters</button>
+        </div>
+      </div>
+      <div class="filter-grid">
+        <div class="field"><label for="fromDate">From Date</label><input type="date" id="fromDate" /></div>
+        <div class="field"><label for="toDate">To Date</label><input type="date" id="toDate" /></div>
+        <div class="field"><label for="granularity">Timeline View</label><select id="granularity"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option></select></div>
+        <div class="field"><label for="areaFilter">Area</label><select id="areaFilter"></select></div>
+        <div class="field"><label for="suburbFilter">Suburb</label><select id="suburbFilter"></select></div>
+        <div class="field"><label for="sourceTypeFilter">Source Type</label><select id="sourceTypeFilter"></select></div>
+        <div class="field"><label for="itemCategoryFilter">Item Category</label><select id="itemCategoryFilter"></select></div>
+        <div class="field"><label for="itemTypeFilter">Item Type</label><select id="itemTypeFilter"></select></div>
+        <div class="field"><label for="materialTypeFilter">Material Type</label><select id="materialTypeFilter"></select></div>
+        <div class="field"><label for="gradeFilter">Grade</label><select id="gradeFilter"></select></div>
+        <div class="field"><label for="buyerFilter">Buyer</label><select id="buyerFilter"></select></div>
+        <div class="field"><label for="paymentStatusFilter">Payment Status</label><select id="paymentStatusFilter"></select></div>
+      </div>
+    </section>
+    <div class="nav-row">
+      <button class="nav-button active" data-section="overview">Overview</button>
+      <button class="nav-button" data-section="operations">Operations</button>
+      <button class="nav-button" data-section="inventory">Inventory</button>
+      <button class="nav-button" data-section="intelligence">Deep Analysis</button>
+      <button class="nav-button" data-section="tables">Tables</button>
+    </div>
+    <section class="kpi-strip">
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </section>
+    <section data-view="overview">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="section-title">
+            <div>
+              <h2>Operational Highlights</h2>
+              <p>Fast answers for the owner and yard manager</p>
+            </div>
+          </div>
+          <div class="summary-list" id="summaryList"></div>
+        </div>
+        <div class="funnel-card">
+          <div class="section-title">
+            <div>
+              <h2>Recovery Funnel</h2>
+              <p>Collected weight to extracted, sold, and unsold stock</p>
+            </div>
+          </div>
+          <div class="funnel-bars" id="funnelBars"></div>
+        </div>
+      </div>
+      <section class="panel">
+        <div class="section-title">
+          <div>
+            <h2>Executive Visuals</h2>
+            <p>Interactive trend and performance analysis</p>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card large">
+            <div class="chart-head">
+              <div>
+                <h3>Collection Trend Over Time</h3>
+                <div class="chart-subtitle">Items collected and revenue moving together over time</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="collectionTrendChart"></canvas></div>
+          </div>
+          <div class="chart-card small">
+            <div class="chart-head">
+              <div>
+                <h3>Top Collected Item Types</h3>
+                <div class="chart-subtitle">Highest-volume input streams</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="topItemsChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3>Material Extraction Breakdown</h3>
+                <div class="chart-subtitle">Recovered material mix from extraction</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="materialBreakdownChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3>Sales By Material</h3>
+                <div class="chart-subtitle">Volume sold and revenue by metal type</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="salesByMaterialChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+    </section>
+    <section class="hidden" data-view="operations">
+      <section class="panel">
+        <div class="section-title">
+          <div>
+            <h2>Operations Performance</h2>
+            <p>Profitability, buyer strength, and area-level performance</p>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card large">
+            <div class="chart-head">
+              <div>
+                <h3>Profitability By Source Item Type</h3>
+                <div class="chart-subtitle">Estimated gross profit against sales value and collection costs</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="profitabilityChart"></canvas></div>
+          </div>
+          <div class="chart-card small">
+            <div class="chart-head">
+              <div>
+                <h3>Buyer Performance</h3>
+                <div class="chart-subtitle">Best buyers by total paid revenue</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="buyerChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3>Area And Suburb Performance</h3>
+                <div class="chart-subtitle">Highest value pickup zones</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="areaChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3>Yield Efficiency</h3>
+                <div class="chart-subtitle">Copper recovery per source item vs recovery rate</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="yieldChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+    </section>
+    <section class="hidden" data-view="inventory">
+      <section class="panel">
+        <div class="section-title">
+          <div>
+            <h2>Inventory And Stock Velocity</h2>
+            <p>What is on hand, what is aging, and what is not converting fast enough</p>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3>Inventory On Hand By Material</h3>
+                <div class="chart-subtitle">Current stock in kilograms and value</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="inventoryChart"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3>Average Selling Price By Material</h3>
+                <div class="chart-subtitle">Price pressure and premium grades over time</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+          </div>
+        </div>
+      </section>
+    </section>
+    <section class="hidden" data-view="intelligence">
+      <section class="panel">
+        <div class="section-title">
+          <div>
+            <h2>Deep Analysis</h2>
+            <p>Automatically generated commercial insights in plain business language</p>
+          </div>
+        </div>
+        <div class="analysis-grid">
+          <div class="insight-card">
+            <div>
+              <h3>Key Signals</h3>
+              <div class="chart-subtitle">Where the money and losses are showing up</div>
+            </div>
+            <div class="insight-list" id="deepInsights"></div>
+          </div>
+          <div class="insight-card">
+            <div>
+              <h3>Recommended Actions</h3>
+              <div class="chart-subtitle">What to target more aggressively next</div>
+            </div>
+            <div class="insight-list" id="actionsList"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+    <section class="hidden" data-view="tables">
+      <section class="panel">
+        <div class="table-toolbar">
+          <div class="tab-row">
+            <button class="tab-button active" data-table="collections">Collections</button>
+            <button class="tab-button" data-table="extraction">Extraction</button>
+            <button class="tab-button" data-table="sales">Sales</button>
+            <button class="tab-button" data-table="inventory">Inventory</button>
+            <button class="tab-button" data-table="profits">Top Profit Contributors</button>
+            <button class="tab-button" data-table="underperformers">Underperformers</button>
+          </div>
+          <div class="toolbar">
+            <input id="tableSearch" type="search" placeholder="Search visible table..." style="min-width:260px;" />
+            <button class="button" id="exportTableBtn">Export Visible Table CSV</button>
+          </div>
+        </div>
+        <div class="table-grid">
+          <div class="table-panel">
+            <div class="table-scroller" id="tableScroller"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+    <div class="footer-note">
+      Single-file operational dashboard. Works with demo data immediately, then recalculates live from uploaded collections, extraction, sales, and inventory files.
+    </div>
+  </div>
+  <script>
+    const COLUMN_REQUIREMENTS = {
+      collections: [
+        "collection_date","area","suburb","source_type","supplier_name","item_category","item_type","quantity_collected","estimated_item_weight_kg","purchase_cost","transport_cost","labour_cost","batch_id","notes"
+      ],
+      extraction: [
+        "extraction_date","batch_id","source_item_type","material_type","grade","quantity_extracted_kg","recovery_rate_pct","estimated_value","waste_generated_kg","notes"
+      ],
+      sales: [
+        "sale_date","buyer","material_type","grade","quantity_sold_kg","price_per_kg","total_received","batch_id","payment_status","notes"
+      ],
+      inventory: [
+        "material_type","grade","current_stock_kg","average_cost_per_kg","estimated_market_value","last_updated"
+      ]
+    };
+    const SELECT_FILTERS = [
+      { key: "area", element: "areaFilter", source: "collections" },
+      { key: "suburb", element: "suburbFilter", source: "collections" },
+      { key: "source_type", element: "sourceTypeFilter", source: "collections" },
+      { key: "item_category", element: "itemCategoryFilter", source: "collections" },
+      { key: "item_type", element: "itemTypeFilter", source: "collections" },
+      { key: "material_type", element: "materialTypeFilter", source: "mixed" },
+      { key: "grade", element: "gradeFilter", source: "mixed" },
+      { key: "buyer", element: "buyerFilter", source: "sales" },
+      { key: "payment_status", element: "paymentStatusFilter", source: "sales" }
+    ];
+    const state = {
+      dataMode: "demo",
+      raw: { collections: [], extraction: [], sales: [], inventory: [] },
+      filtered: { collections: [], extraction: [], sales: [], inventory: [] },
+      activeView: "overview",
+      activeTable: "collections",
+      tableSort: { key: "", dir: "desc" },
+      charts: {},
+      warnings: [],
+      filters: {
+        fromDate: "",
+        toDate: "",
+        granularity: "monthly",
+        area: "All",
+        suburb: "All",
+        source_type: "All",
+        item_category: "All",
+        item_type: "All",
+        material_type: "All",
+        grade: "All",
+        buyer: "All",
+        payment_status: "All"
+      }
+    };
+    const formatters = {
+      currency: new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }),
+      currency2: new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      number: new Intl.NumberFormat("en-ZA"),
+      compact: new Intl.NumberFormat("en-ZA", { notation: "compact", maximumFractionDigits: 1 }),
+      pct: new Intl.NumberFormat("en-ZA", { style: "percent", maximumFractionDigits: 1 })
+    };
+    const dom = {
+      dataModeBadge: document.getElementById("dataModeBadge"),
+      datasetCounts: document.getElementById("datasetCounts"),
+      heroStats: document.getElementById("heroStats"),
+      focusSignals: document.getElementById("focusSignals"),
+      warningList: document.getElementById("warningList"),
+      uploadStatus: document.getElementById("uploadStatus"),
+      dropzone: document.getElementById("dropzone"),
+      fileInput: document.getElementById("fileInput"),
+      loadDemoBtn: document.getElementById("loadDemoBtn"),
+      downloadTemplateBtn: document.getElementById("downloadTemplateBtn"),
+      kpiGrid: document.getElementById("kpiGrid"),
+      summaryList: document.getElementById("summaryList"),
+      funnelBars: document.getElementById("funnelBars"),
+      deepInsights: document.getElementById("deepInsights"),
+      actionsList: document.getElementById("actionsList"),
+      tableScroller: document.getElementById("tableScroller"),
+      tableSearch: document.getElementById("tableSearch"),
+      exportTableBtn: document.getElementById("exportTableBtn")
+    };
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+    function clamp(num, min, max) {
+      return Math.max(min, Math.min(max, num));
+    }
+    function formatDate(input) {
+      if (!input) return "";
+      const date = new Date(input);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toISOString().slice(0, 10);
+    }
+    function addDays(dateStr, days) {
+      const date = new Date(dateStr);
+      date.setDate(date.getDate() + days);
+      return date.toISOString().slice(0, 10);
+    }
+    function diffDays(start, end) {
+      const a = new Date(start);
+      const b = new Date(end);
+      return Math.max(1, Math.round((b - a) / 86400000) + 1);
+    }
+    function startOfWeek(date) {
+      const d = new Date(date);
+      const day = (d.getDay() + 6) % 7;
+      d.setDate(d.getDate() - day);
+      return d;
+    }
+    function startOfQuarter(date) {
+      return new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1);
+    }
+    function endOfQuarter(date) {
+      return new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3 + 3, 0);
+    }
+    function generateDemoData() {
+      const rand = mulberry32(20260418);
+      const areas = {
+        "Northern Suburbs": ["Brackenfell", "Bellville", "Kraaifontein", "Durbanville"],
+        "Southern Suburbs": ["Wynberg", "Retreat", "Ottery", "Plumstead"],
+        "Cape Flats": ["Mitchells Plain", "Khayelitsha", "Phillipi", "Athlone"],
+        "West Coast": ["Table View", "Milnerton", "Parklands", "Sunningdale"],
+        "Helderberg": ["Somerset West", "Strand", "Gordon's Bay", "Macassar"]
+      };
+      const buyers = ["Cape Metals Yard", "Atlantic Scrap Traders", "Boland Recycling", "Metro Salvage", "Northern Copper Depot"];
+      const suppliers = ["Homeowner Callout", "Electrician Bulk Drop", "Appliance Refurbisher", "Security Estate Cleanout", "Workshop Clearance", "Pool Service Contractor"];
+      const itemProfiles = [
+        { item_category: "Appliances", item_type: "Washing Machine", baseWeight: 54, source_type: "Domestic Pickup", yields: { Copper: 2.2, Aluminium: 1.4, Steel: 21, MixedMetal: 3.2, Motor: 1.1, Waste: 8.5 } },
+        { item_category: "Appliances", item_type: "Microwave", baseWeight: 14, source_type: "Domestic Pickup", yields: { Copper: 0.55, Aluminium: 0.2, Steel: 5.6, Transformer: 1.1, MixedMetal: 0.8, Waste: 2.1 } },
+        { item_category: "Pumps", item_type: "Pool Pump", baseWeight: 18, source_type: "Trade Supplier", yields: { Copper: 1.8, Brass: 0.75, Aluminium: 0.5, Motor: 2.6, Steel: 3.8, Waste: 1.6 } },
+        { item_category: "Cooling", item_type: "Fridge Compressor", baseWeight: 13, source_type: "Appliance Dealer", yields: { Copper: 1.25, Steel: 5.2, Compressor: 3.8, Aluminium: 0.45, Waste: 1.9 } },
+        { item_category: "Cables", item_type: "Extension Cable", baseWeight: 11, source_type: "Commercial Site", yields: { Copper: 4.3, InsulatedWire: 4.9, Brass: 0.12, Waste: 0.7 } },
+        { item_category: "Motors", item_type: "Loose Motor", baseWeight: 23, source_type: "Workshop Clearance", yields: { Copper: 3.4, Aluminium: 1.1, Steel: 8.9, Motor: 4.1, MixedMetal: 1.2, Waste: 2.2 } },
+        { item_category: "Power", item_type: "UPS Unit", baseWeight: 27, source_type: "Office Upgrade", yields: { Copper: 1.7, Transformer: 2.9, Steel: 6.6, Aluminium: 0.6, EWasteResidue: 2.4, Waste: 4.2 } },
+        { item_category: "Power", item_type: "Inverter Unit", baseWeight: 20, source_type: "Solar Installer", yields: { Copper: 2.4, Aluminium: 1.8, Transformer: 1.6, Steel: 3.4, EWasteResidue: 1.9, Waste: 1.5 } },
+        { item_category: "Appliances", item_type: "Dishwasher", baseWeight: 44, source_type: "Domestic Pickup", yields: { Copper: 1.3, Aluminium: 0.95, Steel: 18.4, MixedMetal: 2.4, Motor: 0.9, Waste: 7.1 } },
+        { item_category: "Cooling", item_type: "Aircon Unit", baseWeight: 31, source_type: "Commercial Site", yields: { Copper: 4.9, Aluminium: 4.4, Steel: 6.4, Compressor: 3.4, MixedMetal: 1.6, Waste: 3.2 } },
+        { item_category: "Heating", item_type: "Geyser", baseWeight: 33, source_type: "Plumber", yields: { Copper: 1.4, Brass: 1.6, Steel: 9.5, StainlessSteel: 1.3, Waste: 4.6 } },
+        { item_category: "Small Appliances", item_type: "Kettle", baseWeight: 2.3, source_type: "Domestic Pickup", yields: { Copper: 0.16, StainlessSteel: 0.5, Aluminium: 0.1, MixedMetal: 0.12, Waste: 0.35 } },
+        { item_category: "Tools", item_type: "Power Tool", baseWeight: 5.2, source_type: "Workshop Clearance", yields: { Copper: 0.42, Aluminium: 0.18, Steel: 1.1, Motor: 0.38, EWasteResidue: 0.2, Waste: 0.5 } },
+        { item_category: "Appliances", item_type: "Tumble Dryer", baseWeight: 41, source_type: "Domestic Pickup", yields: { Copper: 1.6, Aluminium: 0.8, Steel: 17.3, Motor: 0.95, MixedMetal: 2.0, Waste: 6.3 } },
+        { item_category: "Small Appliances", item_type: "Vacuum Cleaner", baseWeight: 7.1, source_type: "Domestic Pickup", yields: { Copper: 0.48, Aluminium: 0.08, Steel: 1.7, Motor: 0.55, EWasteResidue: 0.3, Waste: 0.8 } }
+      ];
+      const materialGrades = {
+        Copper: ["Millberry", "No.2 Copper"],
+        Aluminium: ["Clean Cast", "Mixed Aluminium"],
+        Brass: ["Clean Brass", "Mixed Brass"],
+        Steel: ["Heavy Steel", "Shred"],
+        StainlessSteel: ["304 Stainless", "Mixed Stainless"],
+        InsulatedWire: ["High Grade Wire", "Mixed Wire"],
+        Compressor: ["Sealed Compressor"],
+        Motor: ["Electric Motor"],
+        Transformer: ["Copper Transformer", "Mixed Transformer"],
+        MixedMetal: ["Mixed Breakage"],
+        EWasteResidue: ["Board Mix"],
+        Waste: ["Non-Recoverable Waste"]
+      };
+      const priceBands = {
+        Copper: [102, 128],
+        Aluminium: [18, 26],
+        Brass: [52, 69],
+        Steel: [3.5, 5.8],
+        StainlessSteel: [14, 22],
+        InsulatedWire: [31, 47],
+        Compressor: [9, 14],
+        Motor: [8, 12],
+        Transformer: [12, 19],
+        MixedMetal: [7, 12],
+        EWasteResidue: [2.5, 5.5]
+      };
+      const collections = [];
+      const extraction = [];
+      const sales = [];
+      const inventoryAccumulator = {};
+      const today = new Date();
+      const start = new Date(today);
+      start.setDate(today.getDate() - 139);
+      let batchCounter = 1000;
+      let saleCounter = 1;
+      for (let d = 0; d < 140; d++) {
+        const current = new Date(start);
+        current.setDate(start.getDate() + d);
+        const dateStr = current.toISOString().slice(0, 10);
+        const runsToday = 2 + Math.floor(rand() * 5);
+        for (let i = 0; i < runsToday; i++) {
+          const profile = itemProfiles[Math.floor(rand() * itemProfiles.length)];
+          const areaNames = Object.keys(areas);
+          const area = areaNames[Math.floor(rand() * areaNames.length)];
+          const suburbList = areas[area];
+          const suburb = suburbList[Math.floor(rand() * suburbList.length)];
+          const quantity = 1 + Math.floor(rand() * (profile.item_type === "Extension Cable" ? 6 : 3));
+          const weightFactor = 0.86 + rand() * 0.38;
+          const estimatedWeight = Number((profile.baseWeight * quantity * weightFactor).toFixed(2));
+          const purchaseCost = Number((estimatedWeight * (2.1 + rand() * 2.4)).toFixed(2));
+          const transportCost = Number((45 + estimatedWeight * (0.4 + rand() * 0.65)).toFixed(2));
+          const labourCost = Number((55 + quantity * 18 + rand() * 42).toFixed(2));
+          const batchId = "B" + batchCounter++;
+          collections.push({
+            collection_date: dateStr,
+            area,
+            suburb,
+            source_type: profile.source_type,
+            supplier_name: suppliers[Math.floor(rand() * suppliers.length)],
+            item_category: profile.item_category,
+            item_type: profile.item_type,
+            quantity_collected: quantity,
+            estimated_item_weight_kg: estimatedWeight,
+            purchase_cost: purchaseCost,
+            transport_cost: transportCost,
+            labour_cost: labourCost,
+            batch_id: batchId,
+            notes: rand() > 0.85 ? "Extra stripping time on site." : ""
+          });
+          const extractionDate = addDays(dateStr, Math.floor(rand() * 5));
+          let recoveredValue = 0;
+          Object.entries(profile.yields).forEach(([materialType, baseQty]) => {
+            const multiplier = 0.78 + rand() * 0.48;
+            const quantityExtracted = Number((baseQty * quantity * multiplier).toFixed(2));
+            if (quantityExtracted <= 0) return;
+            const gradeOptions = materialGrades[materialType] || ["Standard"];
+            const grade = gradeOptions[Math.floor(rand() * gradeOptions.length)];
+            const band = priceBands[materialType] || [0, 0];
+            const valueRate = band[0] ? band[0] + rand() * (band[1] - band[0]) : 0;
+            const estimatedValue = Number((quantityExtracted * valueRate).toFixed(2));
+            const wasteGenerated = materialType === "Waste" ? quantityExtracted : Number((Math.max(0.05, quantityExtracted * (0.03 + rand() * 0.08))).toFixed(2));
+            const recoveryRate = Number(clamp((quantityExtracted / Math.max(estimatedWeight, 1)) * 100, 0.4, 88).toFixed(1));
+            extraction.push({
+              extraction_date: extractionDate,
+              batch_id: batchId,
+              source_item_type: profile.item_type,
+              material_type: materialType === "Waste" ? "Non-Recoverable Waste" : materialType.replace("EWasteResidue", "E-Waste Residue").replace("MixedMetal", "Mixed Metal"),
+              grade,
+              quantity_extracted_kg: quantityExtracted,
+              recovery_rate_pct: recoveryRate,
+              estimated_value: estimatedValue,
+              waste_generated_kg: wasteGenerated,
+              notes: recoveryRate < 8 ? "Low yield batch." : ""
+            });
+            const key = `${materialType}|${grade}`;
+            inventoryAccumulator[key] = (inventoryAccumulator[key] || 0) + quantityExtracted;
+            recoveredValue += estimatedValue;
+            if (band[1] && rand() > 0.42) {
+              const soldFraction = materialType === "Copper" ? 0.62 + rand() * 0.22 : 0.28 + rand() * 0.54;
+              const soldQty = Number((quantityExtracted * soldFraction).toFixed(2));
+              if (soldQty > 0.08) {
+                const saleDate = addDays(extractionDate, Math.floor(rand() * 18));
+                const pricePerKg = Number((band[0] + rand() * (band[1] - band[0])).toFixed(2));
+                const totalReceived = Number((soldQty * pricePerKg).toFixed(2));
+                sales.push({
+                  sale_date: saleDate,
+                  buyer: buyers[Math.floor(rand() * buyers.length)],
+                  material_type: materialType === "Waste" ? "Non-Recoverable Waste" : materialType.replace("EWasteResidue", "E-Waste Residue").replace("MixedMetal", "Mixed Metal"),
+                  grade,
+                  quantity_sold_kg: soldQty,
+                  price_per_kg: pricePerKg,
+                  total_received: totalReceived,
+                  batch_id: batchId,
+                  payment_status: rand() > 0.13 ? "Paid" : (rand() > 0.55 ? "Pending" : "Partially Paid"),
+                  notes: saleCounter++ % 17 === 0 ? "Held back some stock for price improvement." : ""
+                });
+                inventoryAccumulator[key] -= soldQty;
+              }
+            }
+          });
+        }
+      }
+      const inventory = Object.entries(inventoryAccumulator)
+        .map(([key, current_stock_kg]) => {
+          const [rawMaterial, grade] = key.split("|");
+          const materialType = rawMaterial.replace("EWasteResidue", "E-Waste Residue").replace("MixedMetal", "Mixed Metal");
+          if (current_stock_kg <= 0.05 || materialType === "Non-Recoverable Waste") return null;
+          const band = priceBands[rawMaterial] || [4, 9];
+          const avgCost = Number((band[0] * 0.58).toFixed(2));
+          const estimatedMarketValue = Number((current_stock_kg * (band[0] + band[1]) / 2).toFixed(2));
+          return {
+            material_type: materialType,
+            grade,
+            current_stock_kg: Number(current_stock_kg.toFixed(2)),
+            average_cost_per_kg: avgCost,
+            estimated_market_value: estimatedMarketValue,
+            last_updated: formatDate(new Date())
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.estimated_market_value - a.estimated_market_value);
+      return { collections, extraction, sales, inventory };
+    }
+    function parseNumber(value) {
+      if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+      if (value == null || value === "") return 0;
+      const cleaned = String(value).replace(/[^0-9.-]+/g, "");
+      const parsed = Number(cleaned);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    function normalizeRow(row) {
+      const out = {};
+      Object.entries(row).forEach(([key, value]) => {
+        const normalizedKey = String(key).trim().toLowerCase().replace(/\s+/g, "_");
+        out[normalizedKey] = typeof value === "string" ? value.trim() : value;
+      });
+      return out;
+    }
+    function normalizeDataset(rows, type) {
+      return rows.map(normalizeRow).map((row) => {
+        if (type === "collections") {
+          return {
+            collection_date: formatDate(row.collection_date || row.date || row.collectiondate),
+            area: row.area || "Unknown",
+            suburb: row.suburb || "Unknown",
+            source_type: row.source_type || row.source || "Unknown",
+            supplier_name: row.supplier_name || row.supplier || "Unknown",
+            item_category: row.item_category || row.category || "Uncategorised",
+            item_type: row.item_type || row.source_item_type || row.item || "Unknown Item",
+            quantity_collected: parseNumber(row.quantity_collected || row.qty || row.quantity),
+            estimated_item_weight_kg: parseNumber(row.estimated_item_weight_kg || row.weight_kg || row.estimated_weight_kg),
+            purchase_cost: parseNumber(row.purchase_cost),
+            transport_cost: parseNumber(row.transport_cost),
+            labour_cost: parseNumber(row.labour_cost || row.labor_cost),
+            batch_id: row.batch_id || row.batch || `BATCH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+            notes: row.notes || ""
+          };
+        }
+        if (type === "extraction") {
+          return {
+            extraction_date: formatDate(row.extraction_date || row.date),
+            batch_id: row.batch_id || row.batch || "",
+            source_item_type: row.source_item_type || row.item_type || "Unknown Item",
+            material_type: row.material_type || row.material || "Unknown Material",
+            grade: row.grade || "Standard",
+            quantity_extracted_kg: parseNumber(row.quantity_extracted_kg || row.quantity_kg || row.quantity),
+            recovery_rate_pct: parseNumber(row.recovery_rate_pct || row.recovery_rate || row.recovery_pct),
+            estimated_value: parseNumber(row.estimated_value || row.value),
+            waste_generated_kg: parseNumber(row.waste_generated_kg || row.waste_kg),
+            notes: row.notes || ""
+          };
+        }
+        if (type === "sales") {
+          return {
+            sale_date: formatDate(row.sale_date || row.date),
+            buyer: row.buyer || row.scrap_yard || "Unknown Buyer",
+            material_type: row.material_type || row.material || "Unknown Material",
+            grade: row.grade || "Standard",
+            quantity_sold_kg: parseNumber(row.quantity_sold_kg || row.quantity_kg || row.quantity),
+            price_per_kg: parseNumber(row.price_per_kg || row.price),
+            total_received: parseNumber(row.total_received || row.total || row.revenue),
+            batch_id: row.batch_id || row.batch || "",
+            payment_status: row.payment_status || "Unknown",
+            notes: row.notes || ""
+          };
+        }
+        return {
+          material_type: row.material_type || row.material || "Unknown Material",
+          grade: row.grade || "Standard",
+          current_stock_kg: parseNumber(row.current_stock_kg || row.stock_kg || row.quantity_kg),
+          average_cost_per_kg: parseNumber(row.average_cost_per_kg || row.avg_cost_per_kg),
+          estimated_market_value: parseNumber(row.estimated_market_value || row.market_value),
+          last_updated: formatDate(row.last_updated || row.date || new Date())
+        };
+      }).filter((row) => Object.values(row).some((value) => value !== "" && value !== 0));
+    }
+    function validateDataset(type, rows) {
+      const warnings = [];
+      if (!rows.length) {
+        warnings.push({ type: "error", message: `${type} file contained no usable rows.` });
+        return warnings;
+      }
+      const keys = Object.keys(rows[0]);
+      const missing = COLUMN_REQUIREMENTS[type].filter((col) => !keys.includes(col));
+      if (missing.length) {
+        warnings.push({
+          type: "warn",
+          message: `${type} is missing columns: ${missing.join(", ")}. The dashboard loaded what it could and defaulted missing values.`
+        });
+      }
+      return warnings;
+    }
+    function inferDatasetType(name) {
+      const lower = name.toLowerCase();
+      if (lower.includes("collect")) return "collections";
+      if (lower.includes("extract")) return "extraction";
+      if (lower.includes("sale")) return "sales";
+      if (lower.includes("invent")) return "inventory";
+      return "";
+    }
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          row.push(current);
+          current = "";
+        } else if ((char === "\n" || char === "\r") && !inQuotes) {
+          if (char === "\r" && next === "\n") i++;
+          row.push(current);
+          if (row.some((value) => value.trim() !== "")) rows.push(row);
+          row = [];
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      if (current || row.length) {
+        row.push(current);
+        if (row.some((value) => value.trim() !== "")) rows.push(row);
+      }
+      if (!rows.length) return [];
+      const headers = rows.shift().map((header) => header.trim());
+      return rows.map((values) => {
+        const record = {};
+        headers.forEach((header, index) => {
+          record[header] = values[index] ?? "";
+        });
+        return record;
+      });
+    }
+    async function parseFile(file) {
+      const fileName = file.name || "uploaded file";
+      const lower = fileName.toLowerCase();
+      if (lower.endsWith(".csv")) {
+        const text = await file.text();
+        return [{ name: fileName, rows: parseCsv(text) }];
+      }
+      if (!window.XLSX) {
+        throw new Error(`Excel support could not load from CDN, so ${fileName} could not be processed. CSV still works offline.`);
+      }
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      return workbook.SheetNames.map((sheetName) => ({
+        name: sheetName,
+        rows: XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" })
+      }));
+    }
+    async function handleFiles(fileList) {
+      const files = Array.from(fileList || []);
+      if (!files.length) return;
+      const uploaded = { collections: [], extraction: [], sales: [], inventory: [] };
+      const warnings = [];
+      const loadedNames = [];
+      for (const file of files) {
+        try {
+          const parts = await parseFile(file);
+          for (const part of parts) {
+            const type = inferDatasetType(part.name) || inferDatasetType(file.name);
+            if (!type) {
+              warnings.push({ type: "warn", message: `Could not infer dataset type from "${part.name}". Use names like Collections, Extraction, Sales, or Inventory.` });
+              continue;
+            }
+            const normalized = normalizeDataset(part.rows, type);
+            validateDataset(type, normalized).forEach((warning) => warnings.push(warning));
+            uploaded[type].push(...normalized);
+            loadedNames.push(`${file.name}${part.name !== file.name ? ` → ${part.name}` : ""}`);
+          }
+        } catch (error) {
+          warnings.push({ type: "error", message: `${file.name}: ${error.message}` });
+        }
+      }
+      const hasAny = Object.values(uploaded).some((rows) => rows.length);
+      if (!hasAny) {
+        warnings.push({ type: "error", message: "No valid datasets were imported. Demo data remains active." });
+        state.warnings = warnings;
+        renderWarnings();
+        return;
+      }
+      state.raw = {
+        collections: uploaded.collections.length ? uploaded.collections : [],
+        extraction: uploaded.extraction.length ? uploaded.extraction : [],
+        sales: uploaded.sales.length ? uploaded.sales : [],
+        inventory: uploaded.inventory.length ? uploaded.inventory : []
+      };
+      state.dataMode = "uploaded";
+      state.warnings = warnings;
+      dom.uploadStatus.textContent = `Imported ${loadedNames.length} sheet/file sources. Live calculations updated immediately.`;
+      applyDefaultDateRange();
+      refreshAll();
+    }
+    function getAllDates(raw) {
+      const dates = [];
+      raw.collections.forEach((row) => row.collection_date && dates.push(row.collection_date));
+      raw.extraction.forEach((row) => row.extraction_date && dates.push(row.extraction_date));
+      raw.sales.forEach((row) => row.sale_date && dates.push(row.sale_date));
+      return dates.sort();
+    }
+    function applyDefaultDateRange() {
+      const allDates = getAllDates(state.raw);
+      if (!allDates.length) {
+        state.filters.fromDate = "";
+        state.filters.toDate = "";
+        document.getElementById("fromDate").value = "";
+        document.getElementById("toDate").value = "";
+        return;
+      }
+      const maxDate = allDates[allDates.length - 1];
+      const minDate = allDates[Math.max(0, allDates.length - 91)];
+      state.filters.fromDate = minDate;
+      state.filters.toDate = maxDate;
+      document.getElementById("fromDate").value = minDate;
+      document.getElementById("toDate").value = maxDate;
+    }
+    function getFilterDateRange() {
+      const allDates = getAllDates(state.raw);
+      const minDataDate = allDates[0] || formatDate(new Date());
+      const maxDataDate = allDates[allDates.length - 1] || formatDate(new Date());
+      const fromDate = state.filters.fromDate || minDataDate;
+      const toDate = state.filters.toDate || maxDataDate;
+      return { fromDate, toDate, minDataDate, maxDataDate };
+    }
+    function matchesFilter(value, expected) {
+      return expected === "All" || expected === "" || String(value || "") === expected;
+    }
+    function filterRows() {
+      const { fromDate, toDate } = getFilterDateRange();
+      const collections = state.raw.collections.filter((row) => {
+        return (!row.collection_date || (row.collection_date >= fromDate && row.collection_date <= toDate))
+          && matchesFilter(row.area, state.filters.area)
+          && matchesFilter(row.suburb, state.filters.suburb)
+          && matchesFilter(row.source_type, state.filters.source_type)
+          && matchesFilter(row.item_category, state.filters.item_category)
+          && matchesFilter(row.item_type, state.filters.item_type);
+      });
+      const extraction = state.raw.extraction.filter((row) => {
+        return (!row.extraction_date || (row.extraction_date >= fromDate && row.extraction_date <= toDate))
+          && matchesFilter(row.material_type, state.filters.material_type)
+          && matchesFilter(row.grade, state.filters.grade)
+          && (state.filters.item_type === "All" || row.source_item_type === state.filters.item_type);
+      });
+      const sales = state.raw.sales.filter((row) => {
+        return (!row.sale_date || (row.sale_date >= fromDate && row.sale_date <= toDate))
+          && matchesFilter(row.material_type, state.filters.material_type)
+          && matchesFilter(row.grade, state.filters.grade)
+          && matchesFilter(row.buyer, state.filters.buyer)
+          && matchesFilter(row.payment_status, state.filters.payment_status);
+      });
+      const inventory = resolveInventory().filter((row) => {
+        return matchesFilter(row.material_type, state.filters.material_type)
+          && matchesFilter(row.grade, state.filters.grade);
+      });
+      state.filtered = { collections, extraction, sales, inventory };
+    }
+    function resolveInventory() {
+      if (state.raw.inventory.length) return state.raw.inventory;
+      const stock = new Map();
+      state.raw.extraction.forEach((row) => {
+        const key = `${row.material_type}|${row.grade}`;
+        const current = stock.get(key) || {
+          material_type: row.material_type,
+          grade: row.grade,
+          current_stock_kg: 0,
+          average_cost_per_kg: row.quantity_extracted_kg ? row.estimated_value / Math.max(row.quantity_extracted_kg, 1) : 0,
+          estimated_market_value: 0,
+          last_updated: row.extraction_date
+        };
+        current.current_stock_kg += row.quantity_extracted_kg;
+        current.estimated_market_value += row.estimated_value;
+        if (row.extraction_date > current.last_updated) current.last_updated = row.extraction_date;
+        stock.set(key, current);
+      });
+      state.raw.sales.forEach((row) => {
+        const key = `${row.material_type}|${row.grade}`;
+        const current = stock.get(key);
+        if (!current) return;
+        current.current_stock_kg -= row.quantity_sold_kg;
+        current.estimated_market_value -= row.quantity_sold_kg * row.price_per_kg;
+      });
+      return Array.from(stock.values())
+        .map((row) => ({
+          ...row,
+          current_stock_kg: Number(Math.max(0, row.current_stock_kg).toFixed(2)),
+          estimated_market_value: Number(Math.max(0, row.estimated_market_value).toFixed(2))
+        }))
+        .filter((row) => row.current_stock_kg > 0.01)
+        .sort((a, b) => b.estimated_market_value - a.estimated_market_value);
+    }
+    function sum(rows, key) {
+      return rows.reduce((acc, row) => acc + parseNumber(row[key]), 0);
+    }
+    function groupBy(rows, keyFn) {
+      return rows.reduce((acc, row) => {
+        const key = keyFn(row);
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(row);
+        return acc;
+      }, {});
+    }
+    function aggregateBy(rows, keyFn, valueFn) {
+      const map = new Map();
+      rows.forEach((row) => {
+        const key = keyFn(row);
+        map.set(key, (map.get(key) || 0) + valueFn(row));
+      });
+      return Array.from(map.entries()).map(([key, value]) => ({ key, value }));
+    }
+    function formatValue(type, value) {
+      const numeric = parseNumber(value);
+      if (type === "currency") return formatters.currency.format(numeric);
+      if (type === "kg") return `${formatters.number.format(Number(numeric.toFixed(1)))} kg`;
+      if (type === "int") return formatters.number.format(Math.round(numeric));
+      return formatters.number.format(Number(numeric.toFixed(1)));
+    }
+    function getPeriodComparison(metricFn) {
+      const { fromDate, toDate } = getFilterDateRange();
+      const currentDays = diffDays(fromDate, toDate);
+      const prevEnd = addDays(fromDate, -1);
+      const prevStart = addDays(fromDate, -currentDays);
+      const currentValue = metricFn(fromDate, toDate);
+      const previousValue = metricFn(prevStart, prevEnd);
+      const changePct = previousValue === 0 ? (currentValue > 0 ? 1 : 0) : (currentValue - previousValue) / previousValue;
+      return { currentValue, previousValue, changePct };
+    }
+    function metricRowsInRange(rows, dateKey, fromDate, toDate) {
+      return rows.filter((row) => row[dateKey] >= fromDate && row[dateKey] <= toDate);
+    }
+    function buildSparkline(points) {
+      if (!points.length) return "";
+      const width = 92;
+      const height = 28;
+      const max = Math.max(...points);
+      const min = Math.min(...points);
+      const range = max - min || 1;
+      const d = points.map((point, index) => {
+        const x = (index / Math.max(1, points.length - 1)) * (width - 4) + 2;
+        const y = height - (((point - min) / range) * (height - 6) + 3);
+        return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+      }).join(" ");
+      return `<svg class="sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="rgba(217,139,71,0.95)" stroke-width="2.2" stroke-linecap="round" /></svg>`;
+    }
+    function createKpis() {
+      const kpis = [
+        {
+          label: "Total Items Collected",
+          type: "int",
+          calc: (from, to) => sum(metricRowsInRange(state.raw.collections, "collection_date", from, to), "quantity_collected"),
+          spark: () => timeSeries(state.filtered.collections, "collection_date", "quantity_collected", "daily").map((x) => x.value)
+        },
+        {
+          label: "Total Copper Extracted",
+          type: "kg",
+          calc: (from, to) => sum(metricRowsInRange(state.raw.extraction, "extraction_date", from, to).filter((row) => row.material_type === "Copper"), "quantity_extracted_kg"),
+          spark: () => timeSeries(state.filtered.extraction.filter((row) => row.material_type === "Copper"), "extraction_date", "quantity_extracted_kg", "daily").map((x) => x.value)
+        },
+        {
+          label: "Total Metals Sold",
+          type: "kg",
+          calc: (from, to) => sum(metricRowsInRange(state.raw.sales, "sale_date", from, to), "quantity_sold_kg"),
+          spark: () => timeSeries(state.filtered.sales, "sale_date", "quantity_sold_kg", "daily").map((x) => x.value)
+        },
+        {
+          label: "Revenue Received",
+          type: "currency",
+          calc: (from, to) => sum(metricRowsInRange(state.raw.sales, "sale_date", from, to), "total_received"),
+          spark: () => timeSeries(state.filtered.sales, "sale_date", "total_received", "daily").map((x) => x.value)
+        },
+        {
+          label: "Current Stock Value",
+          type: "currency",
+          calc: () => sum(state.filtered.inventory, "estimated_market_value"),
+          spark: () => state.filtered.inventory.slice(0, 8).map((row) => row.estimated_market_value)
+        },
+        {
+          label: "Gross Profit Estimate",
+          type: "currency",
+          calc: (from, to) => {
+            const salesValue = sum(metricRowsInRange(state.raw.sales, "sale_date", from, to), "total_received");
+            const collectionsCost = metricRowsInRange(state.raw.collections, "collection_date", from, to)
+              .reduce((acc, row) => acc + row.purchase_cost + row.transport_cost + row.labour_cost, 0);
+            return salesValue - collectionsCost;
+          },
+          spark: () => {
+            const grouped = timeSeries(state.filtered.sales, "sale_date", "total_received", "weekly");
+            const costs = timeSeries(state.filtered.collections, "collection_date", "purchase_cost", "weekly");
+            return grouped.map((point, index) => point.value - (costs[index]?.value || 0));
+          }
+        }
+      ];
+      dom.kpiGrid.innerHTML = kpis.map((kpi) => {
+        const comparison = getPeriodComparison(kpi.calc);
+        const trendClass = comparison.changePct > 0.02 ? "up" : comparison.changePct < -0.02 ? "down" : "flat";
+        const trendArrow = trendClass === "up" ? "▲" : trendClass === "down" ? "▼" : "■";
+        return `
+          <div class="kpi-card">
+            <div class="kpi-label">${kpi.label}</div>
+            <div class="kpi-value">${formatValue(kpi.type, comparison.currentValue)}</div>
+            <div class="kpi-foot">
+              <span class="trend ${trendClass}">${trendArrow} ${formatters.pct.format(Math.abs(comparison.changePct))}</span>
+              ${buildSparkline(kpi.spark())}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+    function setSelectOptions() {
+      SELECT_FILTERS.forEach((filter) => {
+        const element = document.getElementById(filter.element);
+        let rows = [];
+        if (filter.source === "collections") rows = state.raw.collections;
+        else if (filter.source === "sales") rows = state.raw.sales;
+        else rows = [...state.raw.extraction, ...state.raw.sales, ...resolveInventory()];
+        const values = Array.from(new Set(rows.map((row) => row[filter.key]).filter(Boolean))).sort((a, b) => String(a).localeCompare(String(b)));
+        element.innerHTML = `<option>All</option>${values.map((value) => `<option value="${escapeHtml(String(value))}">${escapeHtml(String(value))}</option>`).join("")}`;
+        element.value = state.filters[filter.key] || "All";
+      });
+    }
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+    function timeSeries(rows, dateKey, valueKey, granularity = state.filters.granularity) {
+      const buckets = new Map();
+      rows.forEach((row) => {
+        const rawDate = row[dateKey];
+        if (!rawDate) return;
+        const date = new Date(rawDate);
+        let label = rawDate;
+        if (granularity === "weekly") {
+          const start = startOfWeek(date);
+          label = start.toISOString().slice(0, 10);
+        } else if (granularity === "monthly") {
+          label = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        } else if (granularity === "quarterly") {
+          label = `${date.getFullYear()} Q${Math.floor(date.getMonth() / 3) + 1}`;
+        }
+        buckets.set(label, (buckets.get(label) || 0) + parseNumber(row[valueKey]));
+      });
+      return Array.from(buckets.entries())
+        .map(([label, value]) => ({ label, value: Number(value.toFixed(2)) }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    }
+    function toChartColor(index, alpha = 1) {
+      const palette = [
+        `rgba(217,139,71,${alpha})`,
+        `rgba(127,161,196,${alpha})`,
+        `rgba(240,180,77,${alpha})`,
+        `rgba(52,211,153,${alpha})`,
+        `rgba(96,165,250,${alpha})`,
+        `rgba(244,114,182,${alpha})`,
+        `rgba(250,204,21,${alpha})`,
+        `rgba(192,132,252,${alpha})`
+      ];
+      return palette[index % palette.length];
+    }
+    function chartDefaults() {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: "#dbe4ee", boxWidth: 12, usePointStyle: true } },
+          tooltip: {
+            backgroundColor: "rgba(13,18,24,0.95)",
+            borderColor: "rgba(255,255,255,0.08)",
+            borderWidth: 1,
+            titleColor: "#fff",
+            bodyColor: "#dce6ef",
+            padding: 12
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: "#a9b6c7" },
+            grid: { color: "rgba(255,255,255,0.05)" }
+          },
+          y: {
+            ticks: { color: "#a9b6c7" },
+            grid: { color: "rgba(255,255,255,0.05)" }
+          }
+        }
+      };
+    }
+    function renderChart(id, config) {
+      if (!window.Chart) return;
+      if (state.charts[id]) state.charts[id].destroy();
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      state.charts[id] = new Chart(ctx, config);
+    }
+    function renderCharts() {
+      if (!window.Chart) {
+        state.warnings.push({ type: "warn", message: "Chart.js could not load from CDN. Tables and KPI calculations still work, but charts are unavailable offline." });
+        renderWarnings();
+        return;
+      }
+      const collectionTrend = timeSeries(state.filtered.collections, "collection_date", "quantity_collected");
+      const revenueTrend = timeSeries(state.filtered.sales, "sale_date", "total_received");
+      renderChart("collectionTrendChart", {
+        type: "line",
+        data: {
+          labels: collectionTrend.map((x) => x.label),
+          datasets: [
+            {
+              label: "Items Collected",
+              data: collectionTrend.map((x) => x.value),
+              borderColor: toChartColor(0, 1),
+              backgroundColor: toChartColor(0, 0.15),
+              tension: 0.32,
+              fill: true,
+              yAxisID: "y"
+            },
+            {
+              label: "Revenue",
+              data: collectionTrend.map((point) => revenueTrend.find((x) => x.label === point.label)?.value || 0),
+              borderColor: toChartColor(1, 1),
+              backgroundColor: toChartColor(1, 0.1),
+              tension: 0.32,
+              yAxisID: "y1"
+            }
+          ]
+        },
+        options: {
+          ...chartDefaults(),
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: chartDefaults().scales.x,
+            y: {
+              ...chartDefaults().scales.y,
+              title: { display: true, text: "Items", color: "#dbe4ee" }
+            },
+            y1: {
+              position: "right",
+              ticks: {
+                color: "#a9b6c7",
+                callback: (value) => formatters.compact.format(value)
+              },
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: "Revenue (ZAR)", color: "#dbe4ee" }
+            }
+          }
+        }
+      });
+      const topItems = aggregateBy(state.filtered.collections, (row) => row.item_type, (row) => row.quantity_collected)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8);
+      renderChart("topItemsChart", {
+        type: "bar",
+        data: {
+          labels: topItems.map((x) => x.key),
+          datasets: [{
+            label: "Items Collected",
+            data: topItems.map((x) => x.value),
+            backgroundColor: topItems.map((_, index) => toChartColor(index, 0.85)),
+            borderRadius: 10
+          }]
+        },
+        options: {
+          ...chartDefaults(),
+          indexAxis: "y",
+          plugins: { ...chartDefaults().plugins, legend: { display: false } }
+        }
+      });
+      const materialMix = aggregateBy(state.filtered.extraction, (row) => row.material_type, (row) => row.quantity_extracted_kg)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+      renderChart("materialBreakdownChart", {
+        type: "doughnut",
+        data: {
+          labels: materialMix.map((x) => x.key),
+          datasets: [{
+            data: materialMix.map((x) => x.value),
+            backgroundColor: materialMix.map((_, index) => toChartColor(index, 0.88)),
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: chartDefaults().plugins,
+          cutout: "58%"
+        }
+      });
+      const salesByMaterial = aggregateBy(state.filtered.sales, (row) => row.material_type, (row) => row.total_received)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+      renderChart("salesByMaterialChart", {
+        type: "bar",
+        data: {
+          labels: salesByMaterial.map((x) => x.key),
+          datasets: [{
+            label: "Revenue",
+            data: salesByMaterial.map((x) => x.value),
+            backgroundColor: salesByMaterial.map((_, index) => toChartColor(index, 0.85)),
+            borderRadius: 12
+          }]
+        },
+        options: {
+          ...chartDefaults(),
+          plugins: {
+            ...chartDefaults().plugins,
+            tooltip: {
+              ...chartDefaults().plugins.tooltip,
+              callbacks: {
+                label: (ctx) => `Revenue: ${formatters.currency.format(ctx.raw)}`
+              }
+            }
+          },
+          scales: {
+            x: chartDefaults().scales.x,
+            y: {
+              ...chartDefaults().scales.y,
+              ticks: { color: "#a9b6c7", callback: (value) => formatters.compact.format(value) }
+            }
+          }
+        }
+      });
+      const profitability = getProfitabilityByItemType().slice(0, 10);
+      renderChart("profitabilityChart", {
+        type: "bar",
+        data: {
+          labels: profitability.map((row) => row.item_type),
+          datasets: [
+            {
+              label: "Revenue",
+              data: profitability.map((row) => row.revenue),
+              backgroundColor: toChartColor(1, 0.72),
+              borderRadius: 10
+            },
+            {
+              label: "Estimated Gross Profit",
+              data: profitability.map((row) => row.profit),
+              backgroundColor: profitability.map((row) => row.profit >= 0 ? toChartColor(3, 0.8) : "rgba(248,113,113,0.82)"),
+              borderRadius: 10
+            }
+          ]
+        },
+        options: {
+          ...chartDefaults(),
+          scales: {
+            x: chartDefaults().scales.x,
+            y: {
+              ...chartDefaults().scales.y,
+              ticks: { color: "#a9b6c7", callback: (value) => formatters.compact.format(value) }
+            }
+          }
+        }
+      });
+      const buyers = aggregateBy(state.filtered.sales.filter((row) => row.payment_status === "Paid" || row.payment_status === "Partially Paid"), (row) => row.buyer, (row) => row.total_received)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 7);
+      renderChart("buyerChart", {
+        type: "polarArea",
+        data: {
+          labels: buyers.map((x) => x.key),
+          datasets: [{
+            data: buyers.map((x) => x.value),
+            backgroundColor: buyers.map((_, index) => toChartColor(index, 0.7)),
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: chartDefaults().plugins,
+          scales: { r: { grid: { color: "rgba(255,255,255,0.08)" }, ticks: { color: "#a9b6c7", backdropColor: "transparent" } } }
+        }
+      });
+      const areas = getAreaPerformance().slice(0, 8);
+      renderChart("areaChart", {
+        type: "bar",
+        data: {
+          labels: areas.map((x) => x.area),
+          datasets: [{
+            label: "Revenue per Pickup",
+            data: areas.map((x) => x.revenuePerPickup),
+            backgroundColor: areas.map((_, i) => toChartColor(i, 0.82)),
+            borderRadius: 10
+          }]
+        },
+        options: {
+          ...chartDefaults(),
+          plugins: {
+            ...chartDefaults().plugins,
+            tooltip: {
+              ...chartDefaults().plugins.tooltip,
+              callbacks: {
+                label: (ctx) => `${formatters.currency.format(ctx.raw)} per pickup`
+              }
+            }
+          },
+          scales: {
+            x: chartDefaults().scales.x,
+            y: {
+              ...chartDefaults().scales.y,
+              ticks: { color: "#a9b6c7", callback: (value) => formatters.compact.format(value) }
+            }
+          }
+        }
+      });
+      const yields = getYieldEfficiency().slice(0, 10);
+      renderChart("yieldChart", {
+        type: "scatter",
+        data: {
+          datasets: [{
+            label: "Copper Yield vs Recovery Rate",
+            data: yields.map((row) => ({ x: row.copperPerItem, y: row.avgRecoveryRate, r: clamp(row.quantity / 3, 4, 16) })),
+            pointBackgroundColor: yields.map((_, index) => toChartColor(index, 0.82)),
+            pointRadius: yields.map((row) => clamp(row.quantity / 3, 5, 14))
+          }]
+        },
+        options: {
+          ...chartDefaults(),
+          plugins: {
+            ...chartDefaults().plugins,
+            tooltip: {
+              ...chartDefaults().plugins.tooltip,
+              callbacks: {
+                label: (ctx) => {
+                  const row = yields[ctx.dataIndex];
+                  return `${row.item_type}: ${row.copperPerItem.toFixed(2)} kg copper/item, ${row.avgRecoveryRate.toFixed(1)}% recovery`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ...chartDefaults().scales.x,
+              title: { display: true, text: "Copper per item (kg)", color: "#dbe4ee" }
+            },
+            y: {
+              ...chartDefaults().scales.y,
+              title: { display: true, text: "Average recovery rate %", color: "#dbe4ee" }
+            }
+          }
+        }
+      });
+      const inventory = state.filtered.inventory.slice(0, 10);
+      renderChart("inventoryChart", {
+        type: "bar",
+        data: {
+          labels: inventory.map((row) => row.material_type),
+          datasets: [
+            {
+              label: "Stock kg",
+              data: inventory.map((row) => row.current_stock_kg),
+              backgroundColor: inventory.map((_, i) => toChartColor(i, 0.78)),
+              borderRadius: 10
+            }
+          ]
+        },
+        options: {
+          ...chartDefaults(),
+          plugins: chartDefaults().plugins
+        }
+      });
+      const prices = aggregateBy(state.filtered.sales, (row) => row.material_type, (row) => row.quantity_sold_kg ? row.total_received / Math.max(row.quantity_sold_kg, 1) : 0)
+        .map((row) => {
+          const materialSales = state.filtered.sales.filter((sale) => sale.material_type === row.key);
+          const averagePrice = materialSales.length ? sum(materialSales, "total_received") / Math.max(sum(materialSales, "quantity_sold_kg"), 1) : 0;
+          return { key: row.key, value: averagePrice };
+        })
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+      renderChart("priceChart", {
+        type: "line",
+        data: {
+          labels: prices.map((x) => x.key),
+          datasets: [{
+            label: "Average Price per kg",
+            data: prices.map((x) => x.value),
+            borderColor: toChartColor(0, 1),
+            backgroundColor: toChartColor(0, 0.18),
+            fill: true,
+            tension: 0.28
+          }]
+        },
+        options: {
+          ...chartDefaults(),
+          scales: {
+            x: chartDefaults().scales.x,
+            y: {
+              ...chartDefaults().scales.y,
+              ticks: { color: "#a9b6c7", callback: (value) => `R${value}` }
+            }
+          }
+        }
+      });
+    }
+    function getBatchMap() {
+      const map = new Map();
+      state.filtered.collections.forEach((row) => {
+        map.set(row.batch_id, row);
+      });
+      return map;
+    }
+    function getProfitabilityByItemType() {
+      const batchMap = getBatchMap();
+      const salesByType = {};
+      state.filtered.sales.forEach((sale) => {
+        const batch = batchMap.get(sale.batch_id);
+        if (!batch) return;
+        const key = batch.item_type;
+        if (!salesByType[key]) {
+          salesByType[key] = {
+            item_type: key,
+            revenue: 0,
+            cost: 0,
+            quantity: 0
+          };
+        }
+        salesByType[key].revenue += sale.total_received;
+      });
+      state.filtered.collections.forEach((row) => {
+        const key = row.item_type;
+        if (!salesByType[key]) {
+          salesByType[key] = { item_type: key, revenue: 0, cost: 0, quantity: 0 };
+        }
+        salesByType[key].cost += row.purchase_cost + row.transport_cost + row.labour_cost;
+        salesByType[key].quantity += row.quantity_collected;
+      });
+      return Object.values(salesByType)
+        .map((row) => ({
+          ...row,
+          profit: row.revenue - row.cost,
+          revenuePerItem: row.revenue / Math.max(row.quantity, 1)
+        }))
+        .sort((a, b) => b.profit - a.profit);
+    }
+    function getAreaPerformance() {
+      const batchMap = getBatchMap();
+      const grouped = {};
+      state.filtered.collections.forEach((row) => {
+        if (!grouped[row.area]) grouped[row.area] = { area: row.area, pickups: 0, revenue: 0, copperKg: 0 };
+        grouped[row.area].pickups += 1;
+      });
+      state.filtered.extraction.forEach((row) => {
+        if (row.material_type !== "Copper") return;
+        const batch = batchMap.get(row.batch_id);
+        if (!batch) return;
+        grouped[batch.area] ||= { area: batch.area, pickups: 0, revenue: 0, copperKg: 0 };
+        grouped[batch.area].copperKg += row.quantity_extracted_kg;
+      });
+      state.filtered.sales.forEach((row) => {
+        const batch = batchMap.get(row.batch_id);
+        if (!batch) return;
+        grouped[batch.area] ||= { area: batch.area, pickups: 0, revenue: 0, copperKg: 0 };
+        grouped[batch.area].revenue += row.total_received;
+      });
+      return Object.values(grouped)
+        .map((row) => ({
+          ...row,
+          revenuePerPickup: row.revenue / Math.max(row.pickups, 1)
+        }))
+        .sort((a, b) => b.revenuePerPickup - a.revenuePerPickup);
+    }
+    function getYieldEfficiency() {
+      const collectionsByType = {};
+      state.filtered.collections.forEach((row) => {
+        collectionsByType[row.item_type] ||= { quantity: 0, weight: 0, copper: 0, recovery: [], item_type: row.item_type };
+        collectionsByType[row.item_type].quantity += row.quantity_collected;
+        collectionsByType[row.item_type].weight += row.estimated_item_weight_kg;
+      });
+      state.filtered.extraction.forEach((row) => {
+        const bucket = collectionsByType[row.source_item_type];
+        if (!bucket) return;
+        if (row.material_type === "Copper") bucket.copper += row.quantity_extracted_kg;
+        bucket.recovery.push(row.recovery_rate_pct);
+      });
+      return Object.values(collectionsByType)
+        .map((row) => ({
+          ...row,
+          copperPerItem: row.copper / Math.max(row.quantity, 1),
+          avgRecoveryRate: row.recovery.length ? row.recovery.reduce((acc, value) => acc + value, 0) / row.recovery.length : 0
+        }))
+        .sort((a, b) => b.copperPerItem - a.copperPerItem);
+    }
+    function renderSummary() {
+      const today = new Date();
+      const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+      const thisWeekStart = startOfWeek(today).toISOString().slice(0, 10);
+      const todayStr = formatDate(today);
+      const todayCollections = state.filtered.collections.filter((row) => row.collection_date === todayStr);
+      const weekCollections = state.filtered.collections.filter((row) => row.collection_date >= thisWeekStart);
+      const monthCollections = state.filtered.collections.filter((row) => row.collection_date.startsWith(thisMonth));
+      const extractionKg = sum(state.filtered.extraction, "quantity_extracted_kg");
+      const soldKg = sum(state.filtered.sales, "quantity_sold_kg");
+      const stockKg = sum(state.filtered.inventory, "current_stock_kg");
+      const avgSalePrice = soldKg ? sum(state.filtered.sales, "total_received") / soldKg : 0;
+      const paidPct = state.filtered.sales.length ? state.filtered.sales.filter((row) => row.payment_status === "Paid").length / state.filtered.sales.length : 0;
+      const todayWeight = sum(todayCollections, "estimated_item_weight_kg");
+      const monthWeight = sum(monthCollections, "estimated_item_weight_kg");
+      const weekWeight = sum(weekCollections, "estimated_item_weight_kg");
+      const summaries = [
+        { label: "Collected Today", value: formatters.number.format(sum(todayCollections, "quantity_collected")), detail: `${formatters.number.format(Number(todayWeight.toFixed(1)))} kg incoming` },
+        { label: "Collected This Week", value: formatters.number.format(sum(weekCollections, "quantity_collected")), detail: `${formatters.number.format(weekCollections.length)} pickup batches` },
+        { label: "Collected This Month", value: formatters.number.format(sum(monthCollections, "quantity_collected")), detail: `${formatters.number.format(Number(monthWeight.toFixed(1)))} kg intake` },
+        { label: "Recovered Material", value: `${formatters.number.format(extractionKg.toFixed(1))} kg`, detail: `${formatters.number.format(soldKg.toFixed(1))} kg already sold` },
+        { label: "Stock Still On Hand", value: `${formatters.number.format(stockKg.toFixed(1))} kg`, detail: `${formatters.currency.format(sum(state.filtered.inventory, "estimated_market_value"))} estimated value` },
+        { label: "Average Selling Price", value: formatters.currency2.format(avgSalePrice), detail: `${formatters.pct.format(paidPct)} of sales fully paid` }
+      ];
+      dom.summaryList.innerHTML = summaries.map((item) => `
+        <div class="summary-item">
+          <div>
+            <div class="subtle">${item.label}</div>
+            <strong>${item.value}</strong>
+          </div>
+          <div class="subtle">${item.detail}</div>
+        </div>
+      `).join("");
+      const totalCollectedWeight = sum(state.filtered.collections, "estimated_item_weight_kg");
+      const totalExtractedKg = sum(state.filtered.extraction, "quantity_extracted_kg");
+      const totalSoldKg = sum(state.filtered.sales, "quantity_sold_kg");
+      const totalUnsoldKg = sum(state.filtered.inventory, "current_stock_kg");
+      const base = Math.max(totalCollectedWeight, totalExtractedKg, totalSoldKg, totalUnsoldKg, 1);
+      const stages = [
+        { label: "Collected Weight", value: totalCollectedWeight, subtitle: "Incoming scrap intake" },
+        { label: "Extracted Materials", value: totalExtractedKg, subtitle: "Recoverable output processed" },
+        { label: "Sold Materials", value: totalSoldKg, subtitle: "Material converted into cash" },
+        { label: "Unsold Stock", value: totalUnsoldKg, subtitle: "Still on hand in inventory" }
+      ];
+      dom.funnelBars.innerHTML = stages.map((stage, index) => `
+        <div class="funnel-stage">
+          <div style="display:flex;justify-content:space-between;gap:12px;">
+            <strong>${stage.label}</strong>
+            <span class="subtle">${formatters.number.format(Number(stage.value.toFixed(1)))} kg</span>
+          </div>
+          <div class="subtle">${stage.subtitle}</div>
+          <div class="funnel-track"><div class="funnel-fill" style="width:${(stage.value / base) * 100}%; background:${index === 3 ? 'linear-gradient(90deg, rgba(240,180,77,0.95), rgba(217,139,71,0.95))' : ''}"></div></div>
+        </div>
+      `).join("");
+    }
+    function renderHero() {
+      const collectionsWeight = sum(state.filtered.collections, "estimated_item_weight_kg");
+      const extractionValue = sum(state.filtered.extraction, "estimated_value");
+      const salesRevenue = sum(state.filtered.sales, "total_received");
+      const stockValue = sum(state.filtered.inventory, "estimated_market_value");
+      const stats = [
+        { label: "Intake Weight", value: `${formatters.number.format(collectionsWeight.toFixed(1))} kg`, tone: "subtle" },
+        { label: "Recovery Value", value: formatters.currency.format(extractionValue), tone: "subtle" },
+        { label: "Revenue Booked", value: formatters.currency.format(salesRevenue), tone: "good" },
+        { label: "Stock Value", value: formatters.currency.format(stockValue), tone: "warn" }
+      ];
+      dom.heroStats.innerHTML = stats.map((stat) => `
+        <div class="status-stat">
+          <span class="subtle">${stat.label}</span>
+          <strong>${stat.value}</strong>
+        </div>
+      `).join("");
+      const focus = generateFocusSignals();
+      dom.focusSignals.innerHTML = focus.map((signal) => `<div class="insight">${signal}</div>`).join("");
+      dom.dataModeBadge.textContent = state.dataMode === "demo" ? "Demo Data Active" : "Uploaded Data Active";
+      dom.dataModeBadge.className = `badge ${state.dataMode === "demo" ? "warn" : "good"}`;
+    }
+    function topMaterialByRevenue() {
+      const grouped = aggregateBy(state.filtered.sales, (row) => row.material_type, (row) => row.total_received).sort((a, b) => b.value - a.value);
+      return grouped[0] || null;
+    }
+    function topItemByCopperYield() {
+      return getYieldEfficiency()[0] || null;
+    }
+    function slowMovingStock() {
+      return [...state.filtered.inventory].sort((a, b) => b.current_stock_kg - a.current_stock_kg)[0] || null;
+    }
+    function generateFocusSignals() {
+      const topCopper = topItemByCopperYield();
+      const topRevenueMaterial = topMaterialByRevenue();
+      const stock = slowMovingStock();
+      const area = getAreaPerformance()[0];
+      const signals = [];
+      if (topCopper) signals.push(`${topCopper.item_type} is leading copper yield at ${topCopper.copperPerItem.toFixed(2)} kg per item.`);
+      if (topRevenueMaterial) signals.push(`${topRevenueMaterial.key} is the top revenue material at ${formatters.currency.format(topRevenueMaterial.value)} in the current view.`);
+      if (stock) signals.push(`${stock.material_type} has the biggest stock build-up at ${stock.current_stock_kg.toFixed(1)} kg still on hand.`);
+      if (area) signals.push(`${area.area} is the strongest collection area by value per pickup.`);
+      return signals.slice(0, 4);
+    }
+    function generateInsights() {
+      const batchMap = getBatchMap();
+      const yields = getYieldEfficiency();
+      const profitability = getProfitabilityByItemType();
+      const areas = getAreaPerformance();
+      const inventory = [...state.filtered.inventory].sort((a, b) => b.current_stock_kg - a.current_stock_kg);
+      const salesPriceTrends = aggregateBy(state.filtered.sales, (row) => row.material_type, (row) => row.total_received)
+        .map((entry) => {
+          const rows = state.filtered.sales.filter((sale) => sale.material_type === entry.key);
+          return {
+            material_type: entry.key,
+            avgPrice: sum(rows, "total_received") / Math.max(sum(rows, "quantity_sold_kg"), 1)
+          };
+        })
+        .sort((a, b) => b.avgPrice - a.avgPrice);
+      const worstCategory = Object.values(groupBy(state.filtered.collections, (row) => row.item_category))
+        .map((rows) => {
+          const itemCategory = rows[0].item_category;
+          const relatedBatchIds = new Set(rows.map((row) => row.batch_id));
+          const revenue = state.filtered.sales.filter((sale) => relatedBatchIds.has(sale.batch_id)).reduce((acc, row) => acc + row.total_received, 0);
+          const cost = rows.reduce((acc, row) => acc + row.purchase_cost + row.transport_cost + row.labour_cost, 0);
+          return { itemCategory, profit: revenue - cost };
+        })
+        .sort((a, b) => a.profit - b.profit)[0];
+      const lowRecovery = [...state.filtered.extraction]
+        .filter((row) => row.recovery_rate_pct > 0)
+        .sort((a, b) => a.recovery_rate_pct - b.recovery_rate_pct)[0];
+      const bestPeriod = timeSeries(state.filtered.sales, "sale_date", "total_received").sort((a, b) => b.value - a.value)[0];
+      const soldKg = sum(state.filtered.sales, "quantity_sold_kg");
+      const extractedKg = sum(state.filtered.extraction, "quantity_extracted_kg");
+      const conversionRate = extractedKg ? soldKg / extractedKg : 0;
+      const unsoldValue = sum(state.filtered.inventory, "estimated_market_value");
+      const insightItems = [];
+      if (yields[0]) insightItems.push({ text: `${yields[0].item_type} delivered the strongest copper recovery at ${yields[0].copperPerItem.toFixed(2)} kg per item in the current window.`, meta: "Highest-yield source item" });
+      if (profitability[0]) insightItems.push({ text: `${profitability[0].item_type} is the most profitable source stream, generating an estimated ${formatters.currency.format(profitability[0].profit)} gross profit.`, meta: "Profitability leader" });
+      if (worstCategory) insightItems.push({ text: `${worstCategory.itemCategory} is the weakest item category right now, with estimated gross profit pressure of ${formatters.currency.format(worstCategory.profit)}.`, meta: "Worst-performing category" });
+      if (inventory[0]) insightItems.push({ text: `${inventory[0].material_type} is the slowest-moving stock line, with ${inventory[0].current_stock_kg.toFixed(1)} kg still sitting in inventory.`, meta: "Slow-moving stock" });
+      if (salesPriceTrends[0]) insightItems.push({ text: `${salesPriceTrends[0].material_type} is attracting the best average selling price at ${formatters.currency2.format(salesPriceTrends[0].avgPrice)} per kg.`, meta: "Best priced material" });
+      if (areas[0]) insightItems.push({ text: `${areas[0].area} collections are outperforming other areas at ${formatters.currency.format(areas[0].revenuePerPickup)} revenue per pickup.`, meta: "Top-performing area" });
+      if (lowRecovery) insightItems.push({ text: `${lowRecovery.source_item_type} batches show unusually low recovery around ${lowRecovery.recovery_rate_pct.toFixed(1)}%, which suggests stripping loss, contamination, or poor source quality.`, meta: "Low recovery alert" });
+      if (bestPeriod) insightItems.push({ text: `${bestPeriod.label} is the strongest selling period in the filtered view, bringing in ${formatters.currency.format(bestPeriod.value)}.`, meta: "Best day/week/month" });
+      insightItems.push({ text: `Collection-to-sale conversion is running at ${formatters.pct.format(conversionRate)}, leaving ${formatters.currency.format(unsoldValue)} tied up in unsold stock.`, meta: "Flow bottleneck" });
+      dom.deepInsights.innerHTML = insightItems.slice(0, 9).map((insight) => `
+        <div class="insight">
+          ${insight.text}
+          <small>${insight.meta}</small>
+        </div>
+      `).join("");
+      const actions = [];
+      if (yields[0]) actions.push(`${yields[0].item_type} and similar motors/cable-heavy units should be targeted more aggressively because they produce the strongest copper recovery.`);
+      if (inventory[0]) actions.push(`Move ${inventory[0].material_type} stock faster or slow further intake until the current ${inventory[0].current_stock_kg.toFixed(1)} kg clears.`);
+      if (worstCategory) actions.push(`Review pricing, stripping process, and pickup costs in ${worstCategory.itemCategory}, because it is dragging the blended margin.`);
+      if (salesPriceTrends[0]) actions.push(`Protect ${salesPriceTrends[0].material_type} grades and keep them clean, because they are carrying premium selling prices.`);
+      if (areas[0]) actions.push(`Increase callout density in ${areas[0].area}, where value per pickup is already outperforming the rest of the network.`);
+      if (conversionRate < 0.55) actions.push(`Sales conversion is lagging behind extraction. Push buyer rotation and faster load-building to free trapped working capital.`);
+      dom.actionsList.innerHTML = actions.slice(0, 6).map((text) => `<div class="insight">${text}</div>`).join("");
+    }
+    function renderWarnings() {
+      const uniqueWarnings = [];
+      const seen = new Set();
+      state.warnings.forEach((warning) => {
+        const key = `${warning.type}|${warning.message}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueWarnings.push(warning);
+        }
+      });
+      dom.warningList.innerHTML = uniqueWarnings.map((warning) => `<div class="warning ${warning.type === "error" ? "error" : ""}">${warning.message}</div>`).join("");
+    }
+    function renderCounts() {
+      dom.datasetCounts.textContent = `Collections ${state.raw.collections.length} | Extraction ${state.raw.extraction.length} | Sales ${state.raw.sales.length} | Inventory ${resolveInventory().length}`;
+    }
+    function getVisibleTableData() {
+      const search = dom.tableSearch.value.trim().toLowerCase();
+      let rows = [];
+      if (state.activeTable === "collections") rows = state.filtered.collections;
+      if (state.activeTable === "extraction") rows = state.filtered.extraction;
+      if (state.activeTable === "sales") rows = state.filtered.sales;
+      if (state.activeTable === "inventory") rows = state.filtered.inventory;
+      if (state.activeTable === "profits") rows = getProfitabilityByItemType().map((row) => ({
+        item_type: row.item_type,
+        revenue: row.revenue,
+        total_cost: row.cost,
+        estimated_gross_profit: row.profit,
+        revenue_per_item: row.revenuePerItem,
+        volume_items: row.quantity
+      }));
+      if (state.activeTable === "underperformers") rows = getUnderperformers();
+      if (search) {
+        rows = rows.filter((row) => JSON.stringify(row).toLowerCase().includes(search));
+      }
+      if (state.tableSort.key) {
+        rows = [...rows].sort((a, b) => {
+          const aVal = a[state.tableSort.key];
+          const bVal = b[state.tableSort.key];
+          const direction = state.tableSort.dir === "asc" ? 1 : -1;
+          if (typeof aVal === "number" || typeof bVal === "number") return (parseNumber(aVal) - parseNumber(bVal)) * direction;
+          return String(aVal || "").localeCompare(String(bVal || "")) * direction;
+        });
+      }
+      return rows;
+    }
+    function getUnderperformers() {
+      const profitability = getProfitabilityByItemType().sort((a, b) => a.profit - b.profit).slice(0, 10);
+      return profitability.map((row) => ({
+        item_type: row.item_type,
+        estimated_gross_profit: row.profit,
+        revenue: row.revenue,
+        total_cost: row.cost,
+        revenue_per_item: row.revenuePerItem,
+        warning_level: row.profit < 0 ? "High" : row.revenuePerItem < 600 ? "Medium" : "Low"
+      }));
+    }
+    function humanizeHeader(key) {
+      return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+    function renderTable() {
+      const rows = getVisibleTableData();
+      if (!rows.length) {
+        dom.tableScroller.innerHTML = `<div class="empty-state">No rows match the current filters for this table.</div>`;
+        return;
+      }
+      const headers = Object.keys(rows[0]);
+      const html = `
+        <table>
+          <thead>
+            <tr>
+              ${headers.map((header) => `<th data-key="${header}">${humanizeHeader(header)} ${state.tableSort.key === header ? (state.tableSort.dir === "asc" ? "▲" : "▼") : ""}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                ${headers.map((header) => `<td class="${typeof row[header] === "number" ? "num" : ""}">${formatCell(header, row[header])}</td>`).join("")}
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+      dom.tableScroller.innerHTML = html;
+      dom.tableScroller.querySelectorAll("th").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.key;
+          if (state.tableSort.key === key) {
+            state.tableSort.dir = state.tableSort.dir === "asc" ? "desc" : "asc";
+          } else {
+            state.tableSort.key = key;
+            state.tableSort.dir = "desc";
+          }
+          renderTable();
+        });
+      });
+    }
+    function formatCell(header, value) {
+      if (header.includes("status")) {
+        const tone = String(value).toLowerCase().includes("paid") && !String(value).toLowerCase().includes("partial")
+          ? "paid"
+          : String(value).toLowerCase().includes("pending")
+            ? "pending"
+            : String(value).toLowerCase().includes("high")
+              ? "risk"
+              : "warn";
+        return `<span class="badge ${tone}">${escapeHtml(String(value))}</span>`;
+      }
+      if (header.includes("profit") || header.includes("revenue") || header.includes("cost") || header.includes("value") || header.includes("price")) {
+        return formatters.currency2.format(parseNumber(value));
+      }
+      if (header.includes("_kg") || header.includes("rate_pct")) {
+        return header.includes("pct") ? `${parseNumber(value).toFixed(1)}%` : `${parseNumber(value).toFixed(2)}`;
+      }
+      if (typeof value === "number") return formatters.number.format(value);
+      return escapeHtml(String(value ?? ""));
+    }
+    function exportVisibleTable() {
+      const rows = getVisibleTableData();
+      if (!rows.length) return;
+      const headers = Object.keys(rows[0]);
+      const csv = [
+        headers.join(","),
+        ...rows.map((row) => headers.map((header) => {
+          const value = row[header] ?? "";
+          const safe = String(value).replace(/"/g, '""');
+          return /[",\n]/.test(safe) ? `"${safe}"` : safe;
+        }).join(","))
+      ].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `metal-recovery-${state.activeTable}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+    function downloadTemplates() {
+      const templates = Object.entries(COLUMN_REQUIREMENTS).map(([name, columns]) => `${name}.csv\n${columns.join(",")}\n`).join("\n");
+      const blob = new Blob([templates], { type: "text/plain;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "metal-recovery-templates.txt";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+    function refreshAll() {
+      renderCounts();
+      setSelectOptions();
+      filterRows();
+      renderWarnings();
+      createKpis();
+      renderSummary();
+      renderHero();
+      generateInsights();
+      renderCharts();
+      renderTable();
+    }
+    function setPresetRange(preset) {
+      const { minDataDate, maxDataDate } = getFilterDateRange();
+      const maxDate = new Date(maxDataDate);
+      let fromDate = minDataDate;
+      let toDate = maxDataDate;
+      if (preset === "today") {
+        fromDate = maxDataDate;
+      } else if (preset === "week") {
+        fromDate = startOfWeek(maxDate).toISOString().slice(0, 10);
+      } else if (preset === "month") {
+        fromDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1).toISOString().slice(0, 10);
+      } else if (preset === "quarter") {
+        fromDate = startOfQuarter(maxDate).toISOString().slice(0, 10);
+        toDate = endOfQuarter(maxDate).toISOString().slice(0, 10);
+      } else if (preset === "all") {
+        fromDate = minDataDate;
+        toDate = maxDataDate;
+      }
+      state.filters.fromDate = fromDate;
+      state.filters.toDate = toDate;
+      document.getElementById("fromDate").value = fromDate;
+      document.getElementById("toDate").value = toDate;
+      refreshAll();
+    }
+    function clearFilters() {
+      state.filters = {
+        fromDate: "",
+        toDate: "",
+        granularity: "monthly",
+        area: "All",
+        suburb: "All",
+        source_type: "All",
+        item_category: "All",
+        item_type: "All",
+        material_type: "All",
+        grade: "All",
+        buyer: "All",
+        payment_status: "All"
+      };
+      document.getElementById("granularity").value = "monthly";
+      applyDefaultDateRange();
+      SELECT_FILTERS.forEach((filter) => {
+        document.getElementById(filter.element).value = "All";
+      });
+      refreshAll();
+    }
+    function bindEvents() {
+      dom.dropzone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        dom.dropzone.classList.add("dragover");
+      });
+      dom.dropzone.addEventListener("dragleave", () => dom.dropzone.classList.remove("dragover"));
+      dom.dropzone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        dom.dropzone.classList.remove("dragover");
+        handleFiles(event.dataTransfer.files);
+      });
+      dom.fileInput.addEventListener("change", (event) => handleFiles(event.target.files));
+      dom.loadDemoBtn.addEventListener("click", () => {
+        state.raw = generateDemoData();
+        state.dataMode = "demo";
+        state.warnings = [];
+        dom.uploadStatus.textContent = "Demo data restored. Upload files at any time to replace it.";
+        applyDefaultDateRange();
+        refreshAll();
+      });
+      dom.downloadTemplateBtn.addEventListener("click", downloadTemplates);
+      dom.exportTableBtn.addEventListener("click", exportVisibleTable);
+      dom.tableSearch.addEventListener("input", renderTable);
+      document.querySelectorAll("[data-preset]").forEach((button) => {
+        button.addEventListener("click", () => setPresetRange(button.dataset.preset));
+      });
+      document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+      document.getElementById("fromDate").addEventListener("change", (event) => {
+        state.filters.fromDate = event.target.value;
+        refreshAll();
+      });
+      document.getElementById("toDate").addEventListener("change", (event) => {
+        state.filters.toDate = event.target.value;
+        refreshAll();
+      });
+      document.getElementById("granularity").addEventListener("change", (event) => {
+        state.filters.granularity = event.target.value;
+        refreshAll();
+      });
+      SELECT_FILTERS.forEach((filter) => {
+        document.getElementById(filter.element).addEventListener("change", (event) => {
+          state.filters[filter.key] = event.target.value;
+          refreshAll();
+        });
+      });
+      document.querySelectorAll(".nav-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.activeView = button.dataset.section;
+          document.querySelectorAll(".nav-button").forEach((node) => node.classList.toggle("active", node === button));
+          document.querySelectorAll("[data-view]").forEach((section) => section.classList.toggle("hidden", section.dataset.view !== state.activeView));
+        });
+      });
+      document.querySelectorAll(".tab-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.activeTable = button.dataset.table;
+          document.querySelectorAll(".tab-button").forEach((node) => node.classList.toggle("active", node === button));
+          renderTable();
+        });
+      });
+    }
+    function init() {
+      state.raw = generateDemoData();
+      applyDefaultDateRange();
+      bindEvents();
+      refreshAll();
+    }
+    init();
+  </script>
+</body>
+</html>
